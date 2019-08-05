@@ -1,0 +1,38 @@
+# ansible-playbook agent_install.yml --extra-vars server_ip="server_ip" --extra-vars agent_ip="agent_ip"
+---
+- name: Add a host to the ansible-playbook in-memory inventory
+  hosts: localhost
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: add host to group
+      add_host:
+        hostname: "{{ agent_ip }}"
+        groups: r1soft-agent
+        ansible_user: ec2-user
+- name: Install r1soft-agent
+  hosts: r1soft-agent
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Add repository
+      yum_repository:
+        name: r1soft
+        file: r1soft
+        description: r1soft repository server
+        baseurl: http://repo.r1soft.com/yum/stable/$basearch/
+        gpgcheck: no
+        enabled: 1
+    - name: yum repolist
+      command: "yum repolist"
+    - name: Install r1soft-agent package
+      package:
+        name: serverbackup-enterprise-agent
+        state: installed
+    - name: Start agent
+      systemd:
+        name: sbm-agent
+        state: restarted
+    - name:
+      command: "r1soft-setup --get-key http://{{ server_ip }}:8080"
+...

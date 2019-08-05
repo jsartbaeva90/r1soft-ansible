@@ -1,0 +1,22 @@
+---
+- name: Create ec2 instances for r1soft server
+  hosts: localhost
+  tasks:
+    - name: Create R1soft server
+      ec2:
+        key_name: app_rsa
+        instance_type: t2.xlarge
+        assign_public_ip: yes
+        region: eu-west-1
+        image: ami-0ff760d16d9497662
+        vpc_subnet_id: subnet-104d904a
+        group: acirrushtech
+        count: 1
+        volumes:
+          - device_name: /dev/xvda
+            volume_type: gp2
+            volume_size: 8
+          - device_name: /dev/xvdb
+            volume_type: gp2
+            volume_size: 1024
+...

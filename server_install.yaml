@@ -1,0 +1,57 @@
+# ansible-playbook server_install.yml --extra-vars server_ip="server_ip"
+---
+- name: Add a host to the ansible-playbook in-memory inventory
+  hosts: localhost
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: add host to group
+      add_host:
+        hostname: "{{ server_ip }}"
+        groups: r1soft-server
+        ansible_user: ec2-user
+
+- name: Install r1soft-server
+  become: yes
+  become_method: sudo
+  hosts: r1soft-server
+  tasks:
+    - name: Create directory to be used as a mount point
+      file:
+        path: /backups
+        state: directory
+    - name: Crate a partition  
+      parted:
+        device: /dev/xvdb
+        number: 1
+        state: present
+    - name: Create an xfs filesystem on /dev/xvdb1
+      filesystem:
+        fstype: xfs
+        dev: /dev/xvdb1
+    - name: Mount the volume for backups
+      mount:
+        path: /backups
+        src: /dev/xvdb1
+        fstype: xfs
+        state: mounted
+
+    - name: Add repository
+      yum_repository:
+        name: r1soft
+        file: r1soft
+        description: r1soft repository server
+        baseurl: http://repo.r1soft.com/yum/stable/$basearch/
+        gpgcheck: no
+        enabled: 1
+    - name:
+      command: "yum repolist"
+    - name: Install r1soft-server package
+      package:
+        name: r1soft-cdp-enterprise-server
+        state: installed
+    - name: Setup r1soft-server
+      shell: "r1soft-setup --user ansible --pass w --http-port 8080"
+    - name: Restart r1soft server
+      shell: "/etc/init.d/cdp-server restart"
+...
